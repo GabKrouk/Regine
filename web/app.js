@@ -8,11 +8,11 @@ let REG, GENES, META, RES, VIEW = { k: 0, by: "p", sort: null, dir: -1, all: fal
 
 // ------------------------------------------------------------------------------------------ theme + banner
 const root = document.documentElement;
-try { const t = localStorage.getItem("regine-theme"); if (t) root.dataset.theme = t; } catch {}
+try { const t = localStorage.getItem("regine-theme-2026"); if (t) root.dataset.theme = t; } catch {}
 $("#theme").addEventListener("click", () => {
   const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
   root.dataset.theme = dark ? "light" : "dark";
-  try { localStorage.setItem("regine-theme", root.dataset.theme); } catch {}
+  try { localStorage.setItem("regine-theme-2026", root.dataset.theme); } catch {}
   if (RES) drawCharts();
 });
 (function banner() {            // a small regulatory network: TFs (bright) wired to targets
