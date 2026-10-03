@@ -72,3 +72,18 @@ test("a random list does not depart from random genes", () => {
   const res = reg.run(pick, { reps: 3000, seed: 3 });
   assert.ok(Math.max(...res.profile.map(p => p.auc)) < 0.6);
 });
+
+import { parseIncoming, buildHash, validPayload } from "../web/bridge.js";
+
+test("bridge: hash round trip, handshake and payload validation", () => {
+  const h = buildHash({ genes: ["AT1G13300", "AT5G67420"], name: "auxin response", go: "GO:0009733", from: "genecloud" });
+  assert.deepEqual(parseIncoming(h), { genes: ["AT1G13300", "AT5G67420"], name: "auxin response", go: "GO:0009733", from: "genecloud", handshake: false });
+  const big = Array.from({ length: 500 }, (_, i) => `AT1G${String(10000 + i)}`);
+  const hs = parseIncoming(buildHash({ genes: big, from: "genecloud", handshake: true }));
+  assert.equal(hs.genes.length, 0);          // too long for a URL: the list travels by postMessage
+  assert.ok(hs.handshake);
+  assert.equal(parseIncoming("#foo=1"), null);
+  assert.ok(validPayload({ type: "genecloud:genes", genes: ["AT1G13300", "AT5G67420"] }));
+  assert.ok(!validPayload({ type: "other", genes: ["AT1G13300", "AT5G67420"] }));
+  assert.ok(!validPayload({ type: "genecloud:genes", genes: ["AT1G13300"] }));
+});

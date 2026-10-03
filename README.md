@@ -7,6 +7,8 @@ the DAP-seq cistrome (O'Malley et al. 2016) as candidate regulators, with their 
 
 **Online program: <https://gabkrouk.github.io/Regine/>** (runs entirely in your browser; your list is never sent anywhere).
 
+Régine and [GeneCloud](https://gabkrouk.github.io/genecloud/) talk to each other (click a GO term → candidate TFs): see [INTEGRATION.md](INTEGRATION.md).
+
 Analyse du code de 2022 et des changements (en français) : [ANALYSE.md](ANALYSE.md).
 
 ## How it works

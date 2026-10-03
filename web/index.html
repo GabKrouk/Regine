@@ -45,6 +45,7 @@ h2{font:600 26px/1.2 var(--serif);margin:10px 0 4px}
 h3{font:600 20px/1.3 var(--serif);margin:30px 0 6px}
 .lead{font:400 17px/1.4 var(--serif);color:var(--sub);margin:0 0 14px;max-width:80ch}
 .note{font-size:13.5px;color:var(--sub)}
+.srcbox{border:1px solid var(--rule);border-left:4px solid var(--brand2);border-radius:8px;padding:10px 14px;margin:0 0 16px;font-size:15px}
 
 form{border:1px solid var(--rule);background:var(--soft);border-radius:10px;padding:6px 18px 14px}
 .row{display:grid;grid-template-columns:220px 1fr;gap:6px 18px;padding:12px 0;border-bottom:1px dashed var(--rule)}
@@ -156,6 +157,8 @@ footer p{margin:0 0 8px;max-width:100ch}
   by random genes, and tells you first whether your list shares regulators at all, and at which kernel size.
   <span class="note">Everything runs in your browser: your list is never sent anywhere.</span></p>
 
+  <div class="srcbox" id="srcbox" style="display:none"></div>
+
   <form id="form" autocomplete="off" novalidate>
     <div class="row">
       <label class="k" for="genes">Gene list<small>AGI identifiers (AT1G01010, At1g01010.1…), any separator</small></label>
@@ -250,6 +253,7 @@ footer p{margin:0 0 8px;max-width:100ch}
       <button type="button" id="dlprof">Kernel profile (TSV)</button>
       <button type="button" id="dlsvg">Profile chart (SVG)</button>
       <button type="button" id="share">Copy link to this analysis</button>
+      <button type="button" id="togc" title="Opens GeneCloud with the genes of your list bound by the 20 best TFs">Send to GeneCloud</button>
     </div>
 
     <div class="tabs" role="tablist">

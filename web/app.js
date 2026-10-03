@@ -1,9 +1,12 @@
 // Régine 2026 — user interface
 import { Regine, parseGenes, quantiles } from "./engine.js";
+import { parseIncoming, listenForGenes, announceReady, sendToGeneCloud, GENECLOUD } from "./bridge.js";
 
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const DATA = "data/";
+let SRC = null;     // where the gene list came from {name, go, from}
+let onReady; const ready = new Promise(r => (onReady = r));
 let REG, GENES, META, RES, VIEW = { k: 0, by: "p", sort: null, dir: -1, all: false, open: new Set() };
 
 // ------------------------------------------------------------------------------------------ theme + banner
@@ -55,7 +58,9 @@ async function load() {
     + `Annotation: ${META.annotation}; TAIR / Araport11 and UniProtKB are CC BY 4.0. Data built ${META.built}.`;
   $("#status").textContent = "";
   $("#submit").disabled = false;
+  onReady();
   fromHash();
+  announceReady();
 }
 load().catch(e => { $("#status").innerHTML = `<span class="err">Could not load the data: ${esc(e.message)}</span>`; });
 
@@ -79,8 +84,42 @@ $$(".examples button").forEach(b => b.addEventListener("click", async () => {
   countGenes();
 }));
 $("#reset").addEventListener("click", () => setTimeout(() => {
+  SRC = null; showSource(0);
   countGenes(); $("#bgcustom").style.display = "none"; $("#results").style.display = "none"; history.replaceState(null, "", location.pathname);
 }));
+
+// ------------------------------------------------------------------------------------------ GeneCloud bridge
+function showSource(n) {
+  const b = $("#srcbox");
+  if (!SRC) { b.style.display = "none"; return; }
+  const what = SRC.go ? `GO term <b>${esc(SRC.go)}</b>${SRC.name ? ` · ${esc(SRC.name)}` : ""}` : esc(SRC.name || "a list");
+  b.innerHTML = `Genes sent by <b>${SRC.from === "genecloud" ? "GeneCloud" : esc(SRC.from)}</b> for ${what}`
+    + (n ? ` (${n} genes). Régine ranks the transcription factors most associated with them below.` : ".");
+  b.style.display = "block";
+}
+async function receive({ genes, name, go, from }) {
+  await ready;
+  SRC = { name, go, from };
+  $("#genes").value = genes.join("\n");
+  showSource(genes.length);
+  countGenes();
+  $("#form").requestSubmit();
+}
+listenForGenes(receive);
+$("#togc").addEventListener("click", () => {
+  const top = rankedRows().filter(r => r.kt > 0).slice(0, 20);
+  const genes = [...new Set(top.flatMap(r => REG.targetsOf(RES, r.t)).filter(g => RES.genes.includes(g)))];
+  const name = `Régine: genes of the list bound by ${top.slice(0, 5).map(r => r.tf.sym || r.tf.id).join(", ")}…`;
+  if (!sendToGeneCloud({ genes, name })) location.href = GENECLOUD;
+});
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-gc]");
+  if (!b) return;
+  e.stopPropagation();
+  const r = REG.score(RES, VIEW.k).find(x => x.tf.id === b.dataset.gc);
+  const genes = REG.targetsOf(RES, r.t).filter(g => RES.genes.includes(g));
+  sendToGeneCloud({ genes, name: `Régine: genes of the list bound by ${r.tf.sym || r.tf.id}` });
+});
 
 function options() {
   return {
@@ -303,7 +342,8 @@ function detail(r) {
       ${r.kt} of your ${RES.n} genes · ${r.Kt.toLocaleString("en")} of ${RES.N.toLocaleString("en")} background genes ·
       enrichment ×${r.fold.toFixed(2)}, P = ${fmtP(r.p)}, FDR = ${fmtP(r.q)} ·
       <a href="https://www.arabidopsis.org/locus?name=${t.id}" target="_blank" rel="noopener">TAIR</a> ·
-      <a href="https://www.uniprot.org/uniprotkb?query=${t.id}" target="_blank" rel="noopener">UniProt</a></p></div>
+      <a href="https://www.uniprot.org/uniprotkb?query=${t.id}" target="_blank" rel="noopener">UniProt</a> ·
+      <button type="button" class="linkbtn" data-gc="${t.id}" title="Open GeneCloud with the ${bound.size} genes of your list bound by this TF">GeneCloud</button></p></div>
     <div><h4>Your genes bound by ${esc(t.sym || t.id)} (${bound.size}/${RES.n}); crossed out: not bound</h4>
       <div class="genes">${shownGenes.map(chip).join("")}${list.length > 300 ? " …" : ""}</div></div>
   </div></td></tr>`;
@@ -372,10 +412,18 @@ $("#share").addEventListener("click", async () => {
 function writeHash(genes, o) {
   if (o.background === "custom") { history.replaceState(null, "", location.pathname); return; }   // too long for a URL
   const p = new URLSearchParams({ g: genes.join(","), bg: o.background, k: o.kernel, r: o.reps, s: o.seed });
+  if (SRC) { if (SRC.name) p.set("n", SRC.name); if (SRC.go) p.set("go", SRC.go); if (SRC.from) p.set("from", SRC.from); }
   history.replaceState(null, "", "#" + p.toString());
 }
 function fromHash() {
+  const inc = parseIncoming(location.hash);
+  if (inc && inc.handshake && !inc.genes.length) {      // GeneCloud will post the list (any size) right after
+    SRC = { name: inc.name, go: inc.go, from: inc.from || "genecloud" }; showSource(0);
+    $("#srcbox").innerHTML += " Waiting for the gene list…";
+    return;
+  }
   if (!location.hash.includes("g=")) return;
+  if (inc && inc.from) { SRC = { name: inc.name, go: inc.go, from: inc.from }; showSource(inc.genes.length); }
   const p = new URLSearchParams(location.hash.slice(1));
   $("#genes").value = (p.get("g") || "").split(",").join("\n");
   const bg = p.get("bg"); if (bg) { const r = $(`input[name=bg][value="${bg}"]`); if (r) r.checked = true; }
