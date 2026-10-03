@@ -64,7 +64,7 @@ l'auxine. Les deux classements sont donc proposés.
 
 * **Valeurs exactes** de Real, Noise et Real − Noise (en fréquences de kernels, plus de tirage, résultat identique à chaque
   lancement), plus l'**enrichissement** (×), la **p-value hypergéométrique** et la **FDR** (Benjamini–Hochberg sur les 387 TF).
-  Classement au choix : score Régine ou p-value.
+  Classement par FDR par défaut, ou par score Régine.
 * **Taille de kernel automatique** : pour k = 2…10, kernels tirés dans la liste et dans le fond (10 000 par taille sur le web,
   graine fixée, donc reproductible). La séparation des deux distributions est mesurée par l'**AUC** : la probabilité qu'un
   kernel de la liste partage plus de TF qu'un kernel aléatoire (0,5 = aucune différence). Le k retenu est celui de l'AUC

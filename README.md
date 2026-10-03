@@ -27,7 +27,7 @@ number of TFs they share is counted (the boxplots of Régine 2022). Their separa
 that a kernel of your list shares more TFs than a random kernel; the *k* with the highest AUC is used.
 
 The score favours TFs that bind almost all of your genes (often broad binders); the P favours TFs whose targets are rare
-in the genome. Both rankings are available. On the 2022 nitrate example, NLP7 binds 10 of the 13 genes and only 829 genes
+in the genome. Both rankings are available; the table is ranked by FDR by default. On the 2022 nitrate example, NLP7 binds 10 of the 13 genes and only 829 genes
 genome-wide (×30, FDR 1e−11).
 
 ## R
@@ -41,8 +41,8 @@ res <- regine(reg, "data/example_nitrate_list.txt", name = "nitrate")
 # -> results/nitrate.pdf (kernel profile), results/nitrate.regulators.tsv, results/nitrate.profile.tsv
 head(res$regulators)
 
-# your own background (recommended: genes expressed in the experiment), fixed kernel, ranked by P
-res <- regine(reg, "my_list.txt", background = "expressed_genes.txt", kernel = 6, rank_by = "p", name = "my_list")
+# your own background (recommended: genes expressed in the experiment), fixed kernel, ranked by Régine score
+res <- regine(reg, "my_list.txt", background = "expressed_genes.txt", kernel = 6, rank_by = "score", name = "my_list")
 ```
 
 `Rscript R/run_regine.R` runs the example. The original 2022 scripts are kept in [`R/legacy_2022/`](R/legacy_2022/).

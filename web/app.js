@@ -4,7 +4,7 @@ import { Regine, parseGenes, quantiles } from "./engine.js";
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const DATA = "data/";
-let REG, GENES, META, RES, VIEW = { k: 0, by: "score", sort: null, dir: -1, all: false, open: new Set() };
+let REG, GENES, META, RES, VIEW = { k: 0, by: "p", sort: null, dir: -1, all: false, open: new Set() };
 
 // ------------------------------------------------------------------------------------------ theme + banner
 const root = document.documentElement;
@@ -351,7 +351,7 @@ $("#dltsv").addEventListener("click", () => {
     "fold", "p", "fdr", "tf_targets_genome", "protein_name", "short_description", "summary", "your_genes_bound_ids"];
   const body = rows.map(r => [r.rank, r.tf.id, r.tf.sym, r.tf.fam, r.kt, RES.n, r.Kt, RES.N, r.real, r.noise, r.score, r.fold, r.p, r.q, r.tf.deg,
     r.tf.name, r.tf.desc, r.tf.summary, REG.targetsOf(RES, r.t).join(",")].join("\t"));
-  const hdr = `# Régine 2026 · kernel size ${VIEW.k}${VIEW.k === RES.kAuto ? " (automatic)" : ""} · ranked by ${VIEW.by === "p" ? "enrichment P" : "Régine score"} · background ${RES.background} (N=${RES.N})\n`;
+  const hdr = `# Régine 2026 · kernel size ${VIEW.k}${VIEW.k === RES.kAuto ? " (automatic)" : ""} · ranked by ${VIEW.by === "p" ? "FDR" : "Régine score"} · background ${RES.background} (N=${RES.N})\n`;
   download(`regine_k${VIEW.k}.tsv`, hdr + head.join("\t") + "\n" + body.join("\n") + "\n", "text/tab-separated-values");
 });
 $("#dlprof").addEventListener("click", () => {

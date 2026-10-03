@@ -86,7 +86,7 @@ regine_profile <- function(reg, genes, background = "network", kernel_range = 2:
 }
 
 # ---------------------------------------------------------------------------------------------- regulators
-regine_regulators <- function(reg, genes, k, background = "network", rank_by = c("score", "p")) {
+regine_regulators <- function(reg, genes, k, background = "network", rank_by = c("p", "score")) {
   rank_by <- match.arg(rank_by)
   s <- .regine_sets(reg, genes, background)
   n <- length(s$L); N <- length(s$B)
@@ -138,7 +138,7 @@ regine_plot <- function(prof, file = NULL, title = "Régine") {
 # ---------------------------------------------------------------------------------------------- one call
 # kernel: "auto" or a number. Writes <out>.pdf (profile), <out>.regulators.tsv and <out>.profile.tsv when out is given.
 regine <- function(reg, genes, background = "network", kernel = "auto", kernel_range = 2:10, reps = 2000, seed = 1,
-                   rank_by = c("score", "p"), name = "my_list", out = file.path("results", name)) {
+                   rank_by = c("p", "score"), name = "my_list", out = file.path("results", name)) {
   prof <- regine_profile(reg, genes, background, kernel_range, reps, seed)
   k <- if (identical(kernel, "auto")) prof$k_auto else as.integer(kernel)
   tab <- regine_regulators(reg, genes, k, background, match.arg(rank_by))

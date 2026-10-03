@@ -225,7 +225,7 @@ footer p{margin:0 0 8px;max-width:100ch}
     <h3>Candidate regulators</h3>
     <div class="ctrl">
       <span>Rank by</span>
-      <span class="seg" id="rankby"><button type="button" data-r="score" class="on">Régine score</button><button type="button" data-r="p">enrichment P</button></span>
+      <span class="seg" id="rankby"><button type="button" data-r="p" class="on">FDR</button><button type="button" data-r="score">Régine score</button></span>
       <span>kernel <select id="kshow"></select></span>
       <select id="famsel"><option value="">all families</option></select>
       <label><input type="checkbox" id="onlysig"> FDR ≤ 5% only</label>
@@ -276,7 +276,7 @@ footer p{margin:0 0 8px;max-width:100ch}
     <p>These are the exact values of what Régine 2022 estimated by drawing 1 000 random kernels (columns <i>Real</i> and
     <i>Noise</i>, here as fractions instead of counts), so the result no longer depends on chance.
     The enrichment P is the hypergeometric probability of finding at least <i>k<sub>t</sub></i> targets of the TF in a
-    random list of <i>n</i> background genes, corrected over the 387 TFs (Benjamini–Hochberg). The score favours TFs that bind
+    random list of <i>n</i> background genes, corrected over the 387 TFs (Benjamini–Hochberg). The table is ranked by FDR by default; the score favours TFs that bind
     almost all of your genes (often broad binders), the P favours TFs whose targets are rare in the genome; look at both.</p>
     <p><b>Automatic kernel size.</b> For each <i>k</i> from 2 to 10, random kernels are drawn from your list and from the
     background, and the number of TFs they share is counted (the boxplots, as in the Régine 2022 PDF). The difference
