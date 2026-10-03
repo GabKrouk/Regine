@@ -1,0 +1,5 @@
+results/
+.Rhistory
+.DS_Store
+node_modules/
+Rplots.pdf
