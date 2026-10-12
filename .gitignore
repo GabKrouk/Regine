@@ -3,3 +3,4 @@ results/
 .DS_Store
 node_modules/
 Rplots.pdf
+!case_studies/*/results/
