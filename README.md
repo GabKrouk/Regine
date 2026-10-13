@@ -30,6 +30,13 @@ The score favours TFs that bind almost all of your genes (often broad binders); 
 in the genome. Both rankings are available; the table is ranked by FDR by default. On the 2022 nitrate example, NLP7 binds 10 of the 13 genes and only 829 genes
 genome-wide (×30, FDR 1e−11).
 
+## Case study: cell identity in the root single-cell atlas
+
+Run on the marker genes of the 14 cell types of the Shahan et al. (2022) root atlas, Régine recovers the identity
+regulators from their targets alone: the VNDs in protoxylem (FDR 10⁻³²), the PEAR DOFs in protophloem (10⁻¹⁹) and
+SOMBRERO in the root cap. The kernel AUC flags the cell types whose regulators are absent from the DAP-seq set.
+Details, data, scripts and figure: [`case_studies/shahan2022_root_atlas/`](case_studies/shahan2022_root_atlas/).
+
 ## R
 
 Base R only, no package to install.

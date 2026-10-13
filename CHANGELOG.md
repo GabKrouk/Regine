@@ -2,6 +2,9 @@
 
 ## 2026 — Régine 2026
 
+* Case study on the Shahan et al. 2022 root single-cell atlas: Régine recovers the VND (protoxylem), PEAR DOF (protophloem)
+  and SOMBRERO (root cap) regulators from cell type marker genes ([`case_studies/shahan2022_root_atlas/`](case_studies/shahan2022_root_atlas/)).
+
 * Exact real / noise / score (no sampling), hypergeometric P and FDR, ranking by score or P.
 * Automatic kernel size (maximal AUC between kernels of the list and random kernels).
 * TF annotation: symbol, family, UniProt name, Araport11 description, TAIR summary, UniProt function.
