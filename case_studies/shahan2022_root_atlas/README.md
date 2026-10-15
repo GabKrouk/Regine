@@ -85,6 +85,52 @@ VND2 = ANAC076, VND3 = ANAC105, VND4 = ANAC007, VND6 = ANAC101; PEAR1 = DOF2.4, 
   Cell-type specificity and the TF's own expression in the cell type separate the members of a family. A candidate should
   therefore be read as "this family, and this member because it is expressed here".
 
+## Régine 2.0: adding the TARGET network
+
+The same 14 marker lists were run with both networks of Régine 2.0
+([`scripts/06_run_target.py`](scripts/06_run_target.py), Python version, same background of expressed genes, 2,000 kernels
+per size, seed 1). TARGET (ConnecTF) adds 65 experiments for 57 TFs, 30 of them absent from DAP-seq, and tells whether a TF
+induces or represses the genes of the list.
+
+| Cell type | Kernel AUC DAP-seq | Kernel AUC TARGET | Top of the side-by-side table (combined FDR) | What TARGET adds |
+|---|---|---|---|---|
+| Protophloem | 0.891 | 0.636 | **NAC096** (3·10⁻⁴²), OBP3, PEAR1/DOF2.4, BBX31 | NAC096 induces 44 of the 134 markers; 31 are also bound by it in DAP-seq |
+| Protoxylem | 0.793 | 0.585 | **VND2**, **VND6**, NAC096, **VND1** | the VNDs are not in TARGET; NAC096 induces 28 markers |
+| Procambium | 0.870 | 0.704 | **MYB61** (3·10⁻²⁵), ZFP4, C2H2, OBP3 | MYB61 induces 44 markers (35 bound and regulated); ZFP4 and C2H2 repress |
+| Endodermis | 0.752 | 0.751 | **MYB61** (4·10⁻²⁴), MYB30, C2H2, GATA17L | MYB61 induces 50 markers; it is a secondary cell wall regulator, which fits the lignified Casparian strip |
+| Metaphloem & companion cell | 0.808 | 0.736 | **LBD38** (1·10⁻¹⁸), DOF4.7, PEAR1/DOF2.4, HCA2 | LBD38 represses 57 of the markers |
+| Metaxylem | 0.609 | 0.699 | **CRF4** (3·10⁻²⁷), bZIP3, CRF2, C2H2 | a list DAP-seq could not explain: the cytokinin response factors CRF4 (root and shoot experiments) and CRF2 induce its markers |
+| Cortex | 0.871 | 0.687 | HB-7, HB23, HB33, HB25 | HB-7 and HB6 (HD-Zip I) induce cortex markers, consistent with the DAP-seq HD-Zip signal |
+| Atrichoblast | 0.841 | 0.743 | CDF1, HB6, HB32, HB40 | CDF1 and HB6 induce the markers |
+| Columella | 0.788 | 0.849 | SNZ, LBD37, TGA1, FBH3 | many TFs both induce and repress markers (less specific) |
+| Lateral root cap | 0.712 | 0.812 | HHO6, CDF1, SNZ, HB6 | idem |
+| Trichoblast | 0.569 | 0.615 | TGA1, HYH, WRKY15, GATA4 | weak: TGA1 and HYH repress some markers |
+| Quiescent center | 0.498 | 0.858 | CRF4, ERF5, CDF1, CRF2 | **artefact**: ribosomal protein genes, see below |
+| Xylem pole pericycle | 0.484 | 0.881 | CRF4, ERF5, RAV1, C2H2 | **artefact**: ribosomal protein genes, see below |
+
+VND2 = ANAC076, VND6 = ANAC101; PEAR1 = DOF2.4. Bold: discussed below. Full tables: `results/both_all_celltypes.tsv.gz`
+(one row per TF), `results/target_all_celltypes.tsv.gz` (one row per TARGET experiment, with the induced and repressed
+tests), `results/target_profiles.tsv` (kernel AUC of both networks).
+
+* **The DAP-seq identity regulators stay on top** in the side-by-side table: the VNDs in protoxylem, the PEAR DOFs in the
+  phloem lineages. They are absent from TARGET, so their rank comes from DAP-seq alone.
+* **TARGET adds a direction and new candidates.** NAC096 in protophloem and MYB61 in procambium and endodermis are both
+  bound (DAP-seq) and regulated (TARGET) by the TF, and they *induce* the markers. LBD38 *represses* the metaphloem
+  markers. CRF4 and CRF2 explain the metaxylem list, which DAP-seq did not. These are hypotheses: TARGET is measured in
+  protoplasts, not in the cell type.
+* **TARGET is less specific than DAP-seq.** A TARGET experiment regulates 2,000 genes on median, so 19 to 62 of the 65
+  experiments have an FDR below 5% in each cell type. Read the direction and the TFs that stand out in one cell type, not
+  the number of significant experiments.
+* **Quiescent center and xylem pole pericycle: a ribosome module, not identity.** These lists, silent in DAP-seq, give the
+  highest TARGET AUCs (0.86 and 0.88) and FDRs down to 10⁻¹⁵¹ for CRF4. 135 of the 200 QC markers are induced by CRF4 and
+  115 of these 135 are ribosomal protein genes. Several TARGET TFs (CRF4, CRF2, ERF5, RAV1, NAC080, bZIP3) induce the
+  ribosomal protein genes in protoplasts, and these two marker lists are rich in them. The kernel profile cannot tell this
+  apart from regulation: check the genes behind a very strong TARGET hit.
+
+```sh
+python3 case_studies/shahan2022_root_atlas/scripts/06_run_target.py case_studies/shahan2022_root_atlas/results
+```
+
 ## Files
 
 | | |
@@ -96,6 +142,9 @@ VND2 = ANAC076, VND3 = ANAC105, VND4 = ANAC007, VND6 = ANAC101; PEAR1 = DOF2.4, 
 | `results/candidates.tsv` | candidates (FDR < 0.05, TF expressed in ≥ 10% of the cells, specificity > 1) |
 | `results/kernel_profiles.tsv` | AUC and mean number of common TFs for k = 2…10 |
 | `results/Regine_Shahan2022_dotplot.{png,pdf}` | figure |
+| `results/both_all_celltypes.tsv.gz` | Régine 2.0, DAP-seq and TARGET side by side: all TFs × 14 cell types |
+| `results/target_all_celltypes.tsv.gz` | Régine 2.0, the 65 TARGET experiments × 14 cell types (all, induced, repressed) |
+| `results/target_profiles.tsv` | kernel AUC of both networks for k = 2…10 |
 
 Reproduce steps 3 to 5 from the repository (Node ≥ 18, Python 3 with pandas and matplotlib):
 
