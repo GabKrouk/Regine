@@ -1,5 +1,10 @@
 # Régine 2026
 
+**REGINE**: *Resampling-based Engine for Gene-set Inference and Network Enrichment*. First described and used in
+Beckers A, Vantroeyen O, Cazevieille C, Adam H, Krouk G, Gantet P, Laplaze L, Guyomarc'h S (2026) PUCHI controls MYB94
+and MYB96 to form the root cap cuticle of developing lateral roots. *Plant Physiol*, in press.
+[doi:10.1093/plphys/kiag670](https://doi.org/10.1093/plphys/kiag670)
+
 **Which transcription factors could regulate your genes?** Give Régine a list of Arabidopsis genes (a cluster,
 co-expressed or differentially expressed genes). It tells you whether the genes of your list share regulators more than
 random genes do, picks the kernel size at which they differ most, and ranks candidate regulators with their annotation,

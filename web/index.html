@@ -37,6 +37,8 @@ a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}
 .banner h1{margin:0;font:700 42px/1.05 var(--serif);letter-spacing:.01em;text-shadow:0 2px 12px rgba(0,0,0,.45)}
 .banner h1 small{font-weight:400;font-size:.5em;opacity:.85;margin-left:.3em}
 .banner p{margin:4px 0 0;font:italic 400 17px var(--serif);opacity:.88}
+.banner p.acro{font:400 13px var(--sans,system-ui);font-style:normal;letter-spacing:.02em;opacity:.8;margin-top:2px}
+.banner p.acro b{font-weight:700}
 nav{border-bottom:1px solid var(--rule)}
 nav .in{max-width:1120px;margin:0 auto;padding:8px 16px;display:flex;gap:22px;flex-wrap:wrap;align-items:center;font:600 13px var(--sans);text-transform:uppercase;letter-spacing:.06em}
 nav a{color:var(--fg)}nav a.cur{color:var(--brand2)}
@@ -151,7 +153,7 @@ footer p{margin:0 0 8px;max-width:100ch}
 <body>
 <header class="banner">
   <svg id="net" aria-hidden="true"></svg>
-  <div class="title"><h1>Régine<small>2026</small></h1><p>which transcription factors could regulate your genes?</p></div>
+  <div class="title"><h1>Régine<small>2026</small></h1><p>which transcription factors could regulate your genes?</p><p class="acro"><b>R</b>esampling-based <b>E</b>ngine for <b>G</b>ene-set <b>I</b>nference and <b>N</b>etwork <b>E</b>nrichment</p></div>
 </header>
 <nav><div class="in">
   <a href="#" class="cur">Online program</a>
@@ -273,6 +275,8 @@ footer p{margin:0 0 8px;max-width:100ch}
 
   <section id="how" class="prose">
     <h3>How it works</h3>
+    <p><b>Régine</b> (REGINE, Resampling-based Engine for Gene-set Inference and Network Enrichment) was first described
+    and used in Beckers et al. (2026) to find candidate regulators of the PUCHI-dependent lipid genes of lateral roots.</p>
     <p><b>Data.</b> Two networks. <i>Binding</i>: the DAP-seq cistrome of O'Malley et al. (2016): for 387 Arabidopsis
     transcription factors, the genes with a binding peak in vitro (2.85 million TF–gene links once duplicates are removed;
     a median TF binds 22% of the genes). <i>Regulation</i>: the 65 TARGET experiments of the ConnecTF database
@@ -320,6 +324,9 @@ footer p{margin:0 0 8px;max-width:100ch}
     transcription factor–gene interactions and validate regulatory networks. <i>Plant Physiol</i> 185:49–66
     (<a href="https://doi.org/10.1093/plphys/kiaa012">doi:10.1093/plphys/kiaa012</a>); Brooks MD et al. (2019) <i>Nat Commun</i> 10:1569;
     Varala K et al. (2018) <i>PNAS</i> 115:6494; Alvarez JM et al. (2020) <i>Nat Commun</i> 11:1157; Bargmann BOR et al. (2013) <i>Mol Plant</i> 6:978 (TARGET).</p>
+    <p><b>Reference:</b> Beckers A, Vantroeyen O, Cazevieille C, Adam H, Krouk G, Gantet P, Laplaze L, Guyomarc'h S (2026)
+    PUCHI controls MYB94 and MYB96 to form the root cap cuticle of developing lateral roots. <i>Plant Physiol</i>, in press.
+    <a href="https://doi.org/10.1093/plphys/kiag670">doi:10.1093/plphys/kiag670</a></p>
     <p id="annot">Annotation: TAIR / Araport11 (CC BY 4.0) · UniProtKB (CC BY 4.0).</p>
   </footer>
 </main>
