@@ -13,6 +13,10 @@
 // TFs binding all genes of a kernel is recorded. The separation of the two distributions is measured by the AUC
 // (probability that a list kernel has more common regulators than a background kernel, ties count one half).
 // The automatic kernel size is the one with the largest AUC.
+//
+// The same engine runs on any TF-gene bit matrix: the DAP-seq cistrome (columns = TFs) or the TARGET experiments
+// (columns = experiments; one matrix each for all, induced and repressed targets). `netBit` is the gene flag that defines the
+// genes of that network (the "network" background).
 
 export const AGI_RE = /\bAT[1-5CM]G\d{5}\b/gi;
 
@@ -85,14 +89,14 @@ export function bh(p) {
 
 export class Regine {
   // ids: gene identifiers (row order of mask); flags: 1 protein coding, 2 in network; tfs: [{id, ...}] in bit order
-  constructor({ ids, flags, mask, W, tfs }) {
-    Object.assign(this, { ids, flags, mask, W, tfs });
+  constructor({ ids, flags, mask, W, tfs, netBit = 2 }) {
+    Object.assign(this, { ids, flags, mask, W, tfs, netBit });
     this.index = new Map(ids.map((g, i) => [g, i]));
   }
 
   background(kind, custom = []) {
     if (kind === "custom") return [...new Set(custom.map(g => this.index.get(g)).filter(i => i != null))];
-    const bit = kind === "protein_coding" ? 1 : 2;
+    const bit = kind === "protein_coding" ? 1 : this.netBit;
     const out = [];
     this.flags.forEach((f, i) => { if (f & bit) out.push(i); });
     return out;
@@ -121,9 +125,10 @@ export class Regine {
     return c;
   }
 
-  // genes: AGIs of the list; opts: {background: "network"|"protein_coding"|"custom", custom: [AGI], kmin, kmax, reps, seed}
+  // genes: AGIs of the list; opts: {background: "network"|"protein_coding"|"custom", custom: [AGI], kmin, kmax, reps, seed,
+  // profile}. profile: false skips the kernel profile (only the enrichment table, at the fixed opts.kernel).
   run(genes, opts = {}) {
-    const { background = "network", custom = [], kmin = 2, reps = 1000, seed = 1 } = opts;
+    const { background = "network", custom = [], kmin = 2, reps = 1000, seed = 1, profile: withProfile = true } = opts;
     const unknown = genes.filter(g => !this.index.has(g));
     const known = genes.filter(g => this.index.has(g));
     const L = known.map(g => this.index.get(g));
@@ -144,7 +149,7 @@ export class Regine {
     };
     const cl = this.coverage(L), cb = this.coverage(B);
     const profile = [];
-    for (let k = kmin; k <= kmax; k++) {
+    for (let k = kmin; withProfile && k <= kmax; k++) {
       const xl = new Int32Array(reps), xb = new Int32Array(reps);
       for (let r = 0; r < reps; r++) { xl[r] = this.common(draw(pl, k), k, acc); xb[r] = this.common(draw(pb, k), k, acc); }
       profile.push({
@@ -153,7 +158,7 @@ export class Regine {
         meanBg: cb.reduce((s, Kt) => s + chooseRatio(Kt, N, k), 0),
       });
     }
-    let best = profile[0];
+    let best = profile[0] ?? { k: Math.min(+opts.kernel || kmin, kmax) };
     for (const p of profile) if (p.auc > best.auc + 1e-12) best = p;
 
     const p = cl.map((kt, t) => hyperUpper(kt, N, cb[t], n)), q = bh(p);
@@ -188,6 +193,40 @@ export class Regine {
     for (let w = 0; w < this.W; w++) c += popcount(this.mask[row * this.W + w]);
     return c;
   }
+}
+
+// The TARGET networks (ConnecTF) on the gene order of the DAP-seq data.
+//   tbuf: bytes of target.bin.gz (induced matrix, then repressed matrix); tmeta: target.json; dap: the DAP-seq Regine.
+// Gene flags gain 4 (targeted in at least one TARGET experiment: the TARGET "network") and 8 (4 and in the DAP-seq
+// network). Returns four engines: any (induced or repressed), up (induced), down (repressed) and inter (bound in DAP-seq
+// AND regulated in TARGET, for the experiments whose TF is in the DAP-seq set; columns = those experiments).
+export function targetNetworks(dap, tbuf, tmeta) {
+  const n = dap.ids.length, W = tmeta.W, E = tmeta.experiments.length;
+  if (tbuf.byteOffset % 4) tbuf = tbuf.slice();
+  const all = new Uint32Array(tbuf.buffer, tbuf.byteOffset, tbuf.byteLength / 4);
+  const up = all.subarray(0, n * W), dn = all.subarray(n * W, 2 * n * W), any = new Uint32Array(n * W);
+  const flags = Uint8Array.from(dap.flags);
+  for (let i = 0; i < n; i++) {
+    let hit = 0;
+    for (let w = 0; w < W; w++) hit |= any[i * W + w] = up[i * W + w] | dn[i * W + w];
+    if (hit) flags[i] |= 4 | (flags[i] & 2 ? 8 : 0);
+  }
+  const exps = tmeta.experiments.map((x, e) => ({ ...x, e }));
+  const dapCol = new Map(dap.tfs.map((t, i) => [t.id, i]));
+  const shared = exps.filter(x => dapCol.has(x.id)), WI = Math.ceil(shared.length / 32), inter = new Uint32Array(n * WI);
+  shared.forEach((x, j) => {
+    const d = dapCol.get(x.id), dw = d >> 5, db = 1 << (d & 31), ew = x.e >> 5, eb = 1 << (x.e & 31);
+    for (let i = 0; i < n; i++)
+      if (dap.mask[i * dap.W + dw] & db && any[i * W + ew] & eb) inter[i * WI + (j >> 5)] |= 1 << (j & 31);
+  });
+  const mk = (mask, w, tfs, netBit) => new Regine({ ids: dap.ids, flags, mask, W: w, tfs, netBit });
+  return { flags, exps, any: mk(any, W, exps, 4), up: mk(up, W, exps, 4), down: mk(dn, W, exps, 4), inter: mk(inter, WI, shared, 8) };
+}
+
+// Fisher's method for two independent P values: X = −2 (ln p1 + ln p2) ~ χ² with 4 degrees of freedom
+export function fisher2(p1, p2) {
+  const x = -2 * (Math.log(Math.max(p1, 1e-300)) + Math.log(Math.max(p2, 1e-300)));
+  return Math.min(1, Math.exp(-x / 2) * (1 + x / 2));
 }
 
 // AUC = P(X > Y) + P(X = Y) / 2, by counting (values are small integers)

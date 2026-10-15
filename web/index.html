@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Régine 2026</title>
-<meta name="description" content="Régine: candidate transcription factors that regulate an Arabidopsis gene list, from the DAP-seq cistrome. Runs entirely in your browser.">
+<meta name="description" content="Régine: candidate transcription factors that regulate an Arabidopsis gene list, from the DAP-seq cistrome and the TARGET experiments of ConnecTF. Runs entirely in your browser.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
@@ -13,16 +13,19 @@
   --bg:#fcfcfb; --fg:#1d232b; --sub:#5d6670; --rule:#dfe3e7; --soft:#f4f5f7; --card:#ffffff;
   --link:#2a6db0; --brand:#4b2a7a; --brand2:#6d42a8; --hi:#f3ecfb; --err:#b42318; --ok:#1f6b2e;
   --list:#7b3fb0; --listfill:rgba(123,63,176,.22); --bgser:#7c858d; --bgfill:rgba(124,133,141,.12); --grid:#eceef1;
+  --tgt:#17806f; --tgtfill:rgba(23,128,111,.2); --up:#b3361e; --dn:#2364a8;
   --serif:"Source Serif 4",Georgia,"Times New Roman",serif; --sans:"Source Sans 3",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
   --mono:ui-monospace,Menlo,Consolas,monospace;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#121019; --fg:#e9e7ef; --sub:#a29fb0; --rule:#2c2838; --soft:#18151f; --card:#16131d;
   --link:#9cc3ef; --brand2:#b48ae6; --hi:#2a2140; --err:#ff8a7a; --ok:#7fd18b;
-  --list:#c59bf0; --listfill:rgba(197,155,240,.22); --bgser:#8e98a3; --bgfill:rgba(142,152,163,.12); --grid:#24212e }}
+  --list:#c59bf0; --listfill:rgba(197,155,240,.22); --bgser:#8e98a3; --bgfill:rgba(142,152,163,.12); --grid:#24212e;
+  --tgt:#5fd0bb; --tgtfill:rgba(95,208,187,.2); --up:#ff8f78; --dn:#8fbff2 }}
 :root[data-theme="dark"]{--bg:#121019;--fg:#e9e7ef;--sub:#a29fb0;--rule:#2c2838;--soft:#18151f;--card:#16131d;
   --link:#9cc3ef;--brand2:#b48ae6;--hi:#2a2140;--err:#ff8a7a;--ok:#7fd18b;
-  --list:#c59bf0;--listfill:rgba(197,155,240,.22);--bgser:#8e98a3;--bgfill:rgba(142,152,163,.12);--grid:#24212e}
+  --list:#c59bf0;--listfill:rgba(197,155,240,.22);--bgser:#8e98a3;--bgfill:rgba(142,152,163,.12);--grid:#24212e;
+  --tgt:#5fd0bb;--tgtfill:rgba(95,208,187,.2);--up:#ff8f78;--dn:#8fbff2}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--fg)}
 body{font:16px/1.55 var(--sans)}
@@ -110,13 +113,23 @@ tr.detail td{background:var(--soft);padding:12px 14px 16px}
 .fam{display:inline-block;font-size:11.5px;border:1px solid var(--rule);border-radius:4px;padding:0 5px;color:var(--sub);white-space:nowrap}
 .sig{display:inline-block;font-size:11px;font-weight:700;border-radius:4px;padding:0 5px;background:var(--ok);color:var(--bg);margin-left:4px;vertical-align:1px}
 .bar{display:inline-block;height:7px;border-radius:2px;background:var(--list);vertical-align:1px;margin-left:6px}
-.barbg{background:var(--bgser)}
+.barbg{background:var(--bgser)}.bartgt{background:var(--tgt)}
+.up{color:var(--up)}.dn{color:var(--dn)}td.up,td.dn{font-weight:600}
+.eff{display:inline-block;font-size:12px;font-weight:700;border-radius:4px;padding:0 6px;white-space:nowrap;border:1px solid currentColor}
+.eff.activates{color:var(--up)}.eff.represses{color:var(--dn)}.eff.both{color:var(--brand2)}
+td.exp{min-width:150px;font-size:13.5px}
+.netsel{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin:4px 0 6px;font-size:14px}
+.netsel .seg button{font-size:14px;padding:6px 14px}
+.summary p{margin:0 0 6px}
 .det{display:grid;grid-template-columns:1fr 1fr;gap:14px 24px}
 .det h4{margin:0 0 4px;font:600 14px var(--sans)}
 .det p{margin:0;font-size:13.5px}
 .genes{display:flex;flex-wrap:wrap;gap:4px 6px;font-size:13px}
-.genes span{border:1px solid var(--rule);border-radius:4px;padding:0 5px;background:var(--card)}
-.genes span.off{opacity:.55;text-decoration:line-through}
+.genes>span{border:1px solid var(--rule);border-radius:4px;padding:0 5px;background:var(--card)}
+.genes>span.off{opacity:.55;text-decoration:line-through}
+.genes>span.up{border-color:var(--up);color:var(--up)}.genes>span.dn{border-color:var(--dn);color:var(--dn)}
+.genes>span.bound{box-shadow:inset 0 -3px 0 var(--list)}
+h4 .bound{box-shadow:inset 0 -3px 0 var(--list)}
 .more{margin:8px 0 0}
 .tabs{display:flex;gap:4px;border-bottom:1px solid var(--rule);margin:28px 0 0}
 .tabs button{font:600 14px var(--sans);background:none;border:0;border-bottom:3px solid transparent;color:var(--sub);padding:8px 12px;cursor:pointer}
@@ -143,7 +156,7 @@ footer p{margin:0 0 8px;max-width:100ch}
 <nav><div class="in">
   <a href="#" class="cur">Online program</a>
   <a href="#how">How it works</a>
-  <a href="https://github.com/GabKrouk/Regine">R code &amp; data</a>
+  <a href="https://github.com/GabKrouk/Regine">Python, R &amp; data</a>
   <a href="https://gabkrouk.github.io/genecloud/">GeneCloud</a>
   <span class="sp"></span>
   <button id="theme" type="button" title="Switch light / dark">light / dark</button>
@@ -152,8 +165,9 @@ footer p{margin:0 0 8px;max-width:100ch}
 <main>
   <h2>Online program</h2>
   <p class="lead">Paste a list of Arabidopsis genes (a cluster, co-expressed or differentially expressed genes).
-  Régine looks for the transcription factors whose DAP-seq peaks are shared by the genes of your list more often than
-  by random genes, and tells you first whether your list shares regulators at all, and at which kernel size.
+  Régine looks for the transcription factors that bind (DAP-seq) or regulate (TARGET) the genes of your list more often
+  than random genes, tells you first whether your list shares regulators at all, and at which kernel size, and whether a
+  TF rather induces or represses your genes.
   <span class="note">Everything runs in your browser: your list is never sent anywhere.</span></p>
 
   <form id="form" autocomplete="off" novalidate>
@@ -166,14 +180,15 @@ footer p{margin:0 0 8px;max-width:100ch}
           <button type="button" data-ex="nitrate_2022">nitrate-responsive genes (Régine 2022, 13 genes)</button> ·
           <button type="button" data-ex="PHR1_induced">PHR1-induced genes (381)</button> ·
           <button type="button" data-ex="hormone_ABA_up">ABA-induced genes (1438)</button> ·
-          <button type="button" data-ex="hormone_IAA_up">auxin-induced genes (430)</button></div>
+          <button type="button" data-ex="hormone_IAA_up">auxin-induced genes (430)</button> ·
+          <button type="button" data-ex="protoxylem_markers">protoxylem cluster, root atlas (200)</button></div>
       </div>
     </div>
     <div class="row">
       <div class="k">Random genes drawn from<small>the background your list is compared with</small></div>
       <div>
         <div class="opts">
-          <label><input type="radio" name="bg" value="network" checked> all genes of the DAP-seq network <span class="n" data-n="network"></span></label>
+          <label><input type="radio" name="bg" value="network" checked> all genes of each network <span class="n" data-n="network"></span></label>
           <label><input type="radio" name="bg" value="protein_coding"> protein-coding genes <span class="n" data-n="protein_coding"></span></label>
           <label><input type="radio" name="bg" value="custom"> my own background <span class="n">(e.g. genes expressed in the experiment; recommended)</span></label>
         </div>
@@ -201,49 +216,44 @@ footer p{margin:0 0 8px;max-width:100ch}
     <div class="buttons">
       <button class="main" id="submit" type="submit" disabled>Find regulators</button>
       <button class="sec" type="reset" id="reset">Reset</button>
-      <span id="status"><span class="loader"></span>loading the DAP-seq network…</span>
+      <span id="status"><span class="loader"></span>loading the DAP-seq and TARGET networks…</span>
     </div>
   </form>
 
   <section id="results" aria-live="polite">
     <h3>Does your list share regulators?</h3>
+    <div class="netsel"><span>Network</span>
+      <span class="seg" id="netsel"><button type="button" data-n="both">DAP-seq + TARGET</button><button type="button" data-n="dap">DAP-seq (binding)</button><button type="button" data-n="any">TARGET (regulation)</button></span></div>
     <div class="summary" id="summary"></div>
     <div id="warnings"></div>
 
-    <div class="chartbox">
-      <div class="ttl">Common regulators per kernel</div>
-      <div class="sub">For each kernel size, random kernels drawn from your list and from the background: number of TFs bound to every gene of the kernel. Click a kernel size to use it.</div>
-      <div class="legend"><span><i style="background:var(--listfill);border:1.5px solid var(--list)"></i>kernels of your list</span><span><i style="background:var(--bgfill);border:1.5px solid var(--bgser)"></i>kernels of random genes</span></div>
+    <div class="chartbox" id="profbox">
+      <div class="ttl" id="profttl">Common regulators per kernel</div>
+      <div class="sub">For each kernel size, random kernels drawn from your list and from the background: number of TFs (DAP-seq) or TARGET experiments bound to / regulating every gene of the kernel. Click a kernel size to use it.</div>
+      <div class="legend" id="proflegend"></div>
       <div id="profile"></div>
     </div>
     <div class="chartbox">
       <div class="ttl">Separation from random genes (AUC)</div>
       <div class="sub">Probability that a kernel of your list shares more regulators than a kernel of random genes (0.5 = no difference). The automatic kernel size is the highest point.</div>
+      <div class="legend" id="auclegend"></div>
       <div id="aucplot"></div>
     </div>
 
     <h3>Candidate regulators</h3>
     <div class="ctrl">
       <span>Rank by</span>
-      <span class="seg" id="rankby"><button type="button" data-r="p" class="on">FDR</button><button type="button" data-r="score">Régine score</button></span>
-      <span>kernel <select id="kshow"></select></span>
+      <span class="seg" id="rankby"></span>
+      <span id="kwrap">kernel <select id="kshow"></select></span>
       <select id="famsel"><option value="">all families</option></select>
       <label><input type="checkbox" id="onlysig"> FDR ≤ 5% only</label>
       <span class="grow"></span>
       <input type="search" id="q" placeholder="search TF, family, description…" style="min-width:220px">
     </div>
-    <div class="scroll"><table id="tftab"><thead><tr>
-      <th>#</th><th data-s="sym">transcription factor</th><th data-s="fam" class="hide-s">family</th><th class="hide-s">description</th>
-      <th data-s="kt" class="num" title="genes of your list bound by the TF">your genes</th>
-      <th data-s="Kt" class="num" title="fraction of the background bound by the TF">background</th>
-      <th data-s="real" class="num" title="fraction of kernels of your list entirely bound by the TF">real</th>
-      <th data-s="noise" class="num" title="fraction of random kernels entirely bound by the TF">noise</th>
-      <th data-s="score" class="num" title="real − noise">score</th>
-      <th data-s="fold" class="num" title="enrichment of the TF's targets in your list">fold</th>
-      <th data-s="q" class="num" title="hypergeometric test, Benjamini–Hochberg">FDR</th>
-    </tr></thead><tbody></tbody></table></div>
+    <p class="note" id="candnote"></p>
+    <div class="scroll"><table id="tftab"><thead></thead><tbody></tbody></table></div>
     <div class="more"><button type="button" class="linkbtn" id="showall"></button></div>
-    <p class="note">Click a transcription factor to see its annotation and the genes of your list it binds. Click a column title to sort.</p>
+    <p class="note">Click a transcription factor to see its annotation and the genes of your list it binds or regulates. Click a column title to sort.</p>
 
     <div class="dl">
       <button type="button" id="dltsv">Table (TSV)</button>
@@ -257,16 +267,20 @@ footer p{margin:0 0 8px;max-width:100ch}
       <button data-p="pfam" role="tab">Families</button>
     </div>
     <div class="panel on" id="pgenes"><div class="scroll" style="max-height:520px;overflow-y:auto"><table id="gtab"><thead><tr>
-      <th>gene</th><th>symbol</th><th>description</th><th class="num">TFs binding</th><th>top candidates binding it</th></tr></thead><tbody></tbody></table></div></div>
-    <div class="panel" id="pfam"><div class="scroll"><table id="ftab"><thead><tr>
-      <th>family</th><th class="num">TFs in DAP-seq</th><th class="num">TFs with FDR ≤ 5%</th><th class="num">in the top 20</th><th>best TFs</th></tr></thead><tbody></tbody></table></div></div>
+      <th>gene</th><th>symbol</th><th>description</th><th class="num">DAP-seq TFs binding</th><th class="num">TARGET experiments regulating</th><th>top candidates (<span class="bound">•</span> bound, <span class="up">↑</span> induced, <span class="dn">↓</span> repressed)</th></tr></thead><tbody></tbody></table></div></div>
+    <div class="panel" id="pfam"><div class="scroll"><table id="ftab"><thead></thead><tbody></tbody></table></div></div>
   </section>
 
   <section id="how" class="prose">
     <h3>How it works</h3>
-    <p><b>Data.</b> The DAP-seq cistrome of O'Malley et al. (2016): for 387 Arabidopsis transcription factors, the genes
-    with a binding peak (2.85 million TF–gene links once duplicates are removed; a median TF binds 22% of the genes).
-    Annotations of the TFs and of your genes come from TAIR / Araport11 and UniProtKB; the family is inferred from them.</p>
+    <p><b>Data.</b> Two networks. <i>Binding</i>: the DAP-seq cistrome of O'Malley et al. (2016): for 387 Arabidopsis
+    transcription factors, the genes with a binding peak in vitro (2.85 million TF–gene links once duplicates are removed;
+    a median TF binds 22% of the genes). <i>Regulation</i>: the 65 TARGET experiments of the ConnecTF database
+    (Brooks et al. 2019, 2021; Varala et al. 2018; Alvarez et al. 2020), 57 TFs: each TF, fused to the glucocorticoid
+    receptor, is moved into the nucleus with dexamethasone in root (59 experiments) or shoot (6) protoplasts, with
+    cycloheximide so that only direct targets respond; the genes induced or repressed after 3 h (FDR &lt; 5%) are its
+    targets. 30 of these TFs are not in the DAP-seq set. Annotations of the TFs and of your genes come from TAIR / Araport11
+    and UniProtKB; the family is inferred from them.</p>
     <p><b>Kernels.</b> Because DAP-seq is permissive, two random genes already share about 28 TFs. Régine therefore looks
     at <i>kernels</i>: groups of <i>k</i> genes of your list, and asks which TFs bind <i>all</i> of them. A real
     regulator of your list binds many of its kernels; a promiscuous TF also binds many random kernels.
@@ -283,16 +297,29 @@ footer p{margin:0 0 8px;max-width:100ch}
     between the two raw counts always peaks at <i>k</i> = 2, where everything shares many TFs, so Régine measures the
     separation of the two distributions instead: the AUC, the probability that a kernel of your list shares more TFs than a
     random kernel. The kernel size with the highest AUC is used. You can click any other size.</p>
+    <p><b>TARGET: direction and combination.</b> Each TARGET experiment is tested three times: on all its regulated
+    genes (the kernels and the score), on its induced genes and on its repressed genes; a TF whose induced (repressed)
+    genes are enriched in your list probably activates (represses) them. A TF tested several times keeps one row per
+    experiment, because repeated experiments overlap little. The TARGET files list the significant genes only, so the
+    TARGET background is the 18 727 genes regulated in at least one experiment. The <i>DAP-seq + TARGET</i> view puts the
+    two networks side by side, one row per TF: the best TARGET experiment of the TF (its P multiplied by the number of
+    experiments), the genes both bound in DAP-seq and regulated in TARGET, and a combined P (Fisher's method) ranked by
+    its FDR over all TFs.</p>
     <p><b>Background.</b> The random genes should be genes that could have been in your list: when your list comes from an
-    RNA-seq or array experiment, paste the expressed (or measured) genes as your own background.</p>
+    RNA-seq or array experiment, paste the expressed (or measured) genes as your own background (it is then used for both
+    networks).</p>
   </section>
 
   <footer>
-    <p><b>Régine</b> — G. Krouk (2022; 2026 version). Code and R version:
+    <p><b>Régine</b> — G. Krouk (2022; 2026 version). Code, Python and R versions:
     <a href="https://github.com/GabKrouk/Regine">github.com/GabKrouk/Regine</a> (MIT licence).</p>
     <p><b>DAP-seq data:</b> O'Malley RC, Huang SC, Song L, Lewsey MG, Bartlett A, Nery JR, Galli M, Gallavotti A, Ecker JR (2016)
     Cistrome and epicistrome features shape the regulatory DNA landscape. <i>Cell</i> 165:1280–1292.
     <a href="https://doi.org/10.1016/j.cell.2016.04.038">doi:10.1016/j.cell.2016.04.038</a></p>
+    <p><b>TARGET data:</b> ConnecTF data release v1. Brooks MD et al. (2021) ConnecTF: a platform to integrate
+    transcription factor–gene interactions and validate regulatory networks. <i>Plant Physiol</i> 185:49–66
+    (<a href="https://doi.org/10.1093/plphys/kiaa012">doi:10.1093/plphys/kiaa012</a>); Brooks MD et al. (2019) <i>Nat Commun</i> 10:1569;
+    Varala K et al. (2018) <i>PNAS</i> 115:6494; Alvarez JM et al. (2020) <i>Nat Commun</i> 11:1157; Bargmann BOR et al. (2013) <i>Mol Plant</i> 6:978 (TARGET).</p>
     <p id="annot">Annotation: TAIR / Araport11 (CC BY 4.0) · UniProtKB (CC BY 4.0).</p>
   </footer>
 </main>

@@ -72,3 +72,38 @@ test("a random list does not depart from random genes", () => {
   const res = reg.run(pick, { reps: 3000, seed: 3 });
   assert.ok(Math.max(...res.profile.map(p => p.auc)) < 0.6);
 });
+
+// ---------------------------------------------------------------------------- TARGET (ConnecTF)
+const { target, tmeta } = loadRegine();
+
+test("TARGET data: 65 experiments, 57 TFs, induced and repressed are disjoint", () => {
+  assert.equal(tmeta.n_experiments, 65);
+  assert.equal(tmeta.n_tfs, 57);
+  let up = 0, dn = 0, both = 0;
+  for (let g = 0; g < target.up.ids.length; g++) {
+    up += target.up.nTF(g); dn += target.down.nTF(g);
+    for (let w = 0; w < target.up.W; w++) both += target.up.mask[g * target.up.W + w] & target.down.mask[g * target.up.W + w] ? 1 : 0;
+  }
+  assert.equal(up + dn, tmeta.n_edges);
+  assert.equal(both, 0);
+  assert.equal(target.any.background("network").length, tmeta.universe);
+  assert.equal(target.inter.tfs.length, tmeta.experiments.filter(x => reg.tfs.some(t => t.id === x.id)).length);
+});
+
+test("nitrate example on TARGET: NLP7 first, through its induced targets; bound ∩ regulated", () => {
+  const any = target.any.run(nitrate, { reps: 1000 });
+  const best = [...any.rows].sort((a, b) => a.p - b.p)[0];
+  assert.equal(best.tf.sym, "NLP7");
+  const up = target.up.run(nitrate, { profile: false, kernel: any.k }), dn = target.down.run(nitrate, { profile: false, kernel: any.k });
+  assert.equal(up.profile.length, 0);
+  assert.ok(up.q[best.t] < 1e-4 && dn.cl[best.t] === 0);
+  const inter = target.inter.run(nitrate, { profile: false, kernel: 2 }), j = target.inter.tfs.findIndex(x => x.sym === "NLP7");
+  assert.equal(inter.cb[j], 54);        // genes bound by NLP7 in DAP-seq and regulated by NLP7 in TARGET
+  assert.ok(inter.q[j] < 1e-4);
+});
+
+test("fisher2 combines two P values", async () => {
+  const { fisher2 } = await import("../web/engine.js");
+  assert.ok(Math.abs(fisher2(0.05, 0.05) - 0.0175) < 5e-4);   // R: pchisq(-2*log(0.05^2), 4, lower.tail=FALSE)
+  assert.equal(fisher2(1, 1), 1);
+});
