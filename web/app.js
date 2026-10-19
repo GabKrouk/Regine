@@ -158,6 +158,7 @@ $("#form").addEventListener("submit", e => {
       $("#status").textContent = `done in ${((performance.now() - t0) / 1000).toFixed(1)} s`;
       show();
       writeHash(genes, o);
+      if (SRC) $("#results").scrollIntoView({ behavior: "smooth", block: "start" });   // a list sent by GeneCloud: go to the TFs
     } catch (err) {
       $("#status").innerHTML = `<span class="err">${esc(err.message)}</span>`;
       console.error(err);
