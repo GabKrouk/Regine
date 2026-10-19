@@ -18,6 +18,8 @@ and side by side, one row per TF, with the genes both bound and regulated and a 
 
 **Online program: <https://gabkrouk.github.io/Regine/>** (runs entirely in your browser; your list is never sent anywhere).
 
+Régine and [GeneCloud](https://gabkrouk.github.io/genecloud/) talk to each other (click a GO term → candidate TFs): see [INTEGRATION.md](INTEGRATION.md).
+
 Analyse du code de 2022 et des changements (en français) : [ANALYSE.md](ANALYSE.md).
 
 ## How it works
