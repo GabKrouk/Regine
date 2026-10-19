@@ -107,3 +107,19 @@ test("fisher2 combines two P values", async () => {
   assert.ok(Math.abs(fisher2(0.05, 0.05) - 0.0175) < 5e-4);   // R: pchisq(-2*log(0.05^2), 4, lower.tail=FALSE)
   assert.equal(fisher2(1, 1), 1);
 });
+
+import { parseIncoming, buildHash, validPayload } from "../web/bridge.js";
+
+test("bridge: hash round trip, handshake and payload validation", () => {
+  const h = buildHash({ genes: ["AT1G13300", "AT5G67420"], name: "auxin response", go: "GO:0009733", from: "genecloud" });
+  assert.deepEqual(parseIncoming(h), { genes: ["AT1G13300", "AT5G67420"], name: "auxin response", go: "GO:0009733", from: "genecloud", handshake: false });
+  assert.ok(h.includes("name=auxin"));      // "n" is the network view of Régine's own links
+  const big = Array.from({ length: 500 }, (_, i) => `AT1G${String(10000 + i)}`);
+  const hs = parseIncoming(buildHash({ genes: big, from: "genecloud", handshake: true }));
+  assert.equal(hs.genes.length, 0);          // too long for a URL: the list travels by postMessage
+  assert.ok(hs.handshake);
+  assert.equal(parseIncoming("#foo=1"), null);
+  assert.ok(validPayload({ type: "genecloud:genes", genes: ["AT1G13300", "AT5G67420"] }));
+  assert.ok(!validPayload({ type: "other", genes: ["AT1G13300", "AT5G67420"] }));
+  assert.ok(!validPayload({ type: "genecloud:genes", genes: ["AT1G13300"] }));
+});

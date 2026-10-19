@@ -1,5 +1,6 @@
 // Régine 2026 — user interface
 import { Regine, parseGenes, quantiles, targetNetworks, fisher2, bh } from "./engine.js";
+import { parseIncoming, listenForGenes, announceReady, sendToGeneCloud, GENECLOUD } from "./bridge.js";
 
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -7,6 +8,8 @@ const DATA = "data/";
 // networks: dap = DAP-seq (TFs), any = TARGET (experiments), both = side by side (one row per TF)
 const NETNAME = { dap: "DAP-seq", any: "TARGET", both: "DAP-seq + TARGET" };
 let DAP, T, GENES, META, TMETA, R;
+let SRC = null;     // where the gene list came from {name, go, from}
+let onReady; const ready = new Promise(r => (onReady = r));
 let VIEW = { net: "both", k: {}, by: { dap: "p", any: "p", both: "c" }, sort: null, dir: -1, all: false, open: new Set() };
 
 // ------------------------------------------------------------------------------------------ theme + banner
@@ -62,7 +65,9 @@ async function load() {
     + `Annotation: ${META.annotation}; TAIR / Araport11 and UniProtKB are CC BY 4.0. Data built ${META.built} (DAP-seq), ${tmeta.built} (TARGET).`;
   $("#status").textContent = "";
   $("#submit").disabled = false;
+  onReady();
   fromHash();
+  announceReady();
 }
 load().catch(e => { $("#status").innerHTML = `<span class="err">Could not load the data: ${esc(e.message)}</span>`; });
 
@@ -86,8 +91,47 @@ $$(".examples button").forEach(b => b.addEventListener("click", async () => {
   countGenes();
 }));
 $("#reset").addEventListener("click", () => setTimeout(() => {
+  SRC = null; showSource(0);
   countGenes(); $("#bgcustom").style.display = "none"; $("#results").style.display = "none"; history.replaceState(null, "", location.pathname);
 }));
+
+// ------------------------------------------------------------------------------------------ GeneCloud bridge
+function showSource(n) {
+  const b = $("#srcbox");
+  if (!SRC) { b.style.display = "none"; return; }
+  const what = SRC.go ? `GO term <b>${esc(SRC.go)}</b>${SRC.name ? ` · ${esc(SRC.name)}` : ""}` : SRC.name ? `<b>${esc(SRC.name)}</b>` : "a list";
+  b.innerHTML = `Genes sent by <b>${SRC.from === "genecloud" ? "GeneCloud" : esc(SRC.from)}</b>: ${what}`
+    + (n ? ` (${n} genes). Régine ranks below the transcription factors that bind (DAP-seq) or regulate (TARGET) them more than expected.` : ".");
+  b.style.display = "block";
+}
+async function receive({ genes, name, go, from }) {
+  await ready;
+  SRC = { name, go, from };
+  $("#genes").value = genes.join("\n");
+  showSource(genes.length);
+  countGenes();
+  $("#form").requestSubmit();
+}
+listenForGenes(receive);
+// genes of the list bound (DAP-seq) or regulated (TARGET, best experiment) by the TF of a row of the current view
+function rowGenes(r) {
+  const g = VIEW.net === "dap" ? DAP.targetsOf(R.dap, r.t) : VIEW.net === "any" ? T.any.targetsOf(R.any, r.t)
+    : [...(r.d ? DAP.targetsOf(R.dap, r.d.t) : []), ...(r.best ? T.any.targetsOf(R.any, r.best.t) : [])];
+  return [...new Set(g)].filter(x => R.genes.includes(x));
+}
+$("#togc").addEventListener("click", () => {
+  const top = rankedRows().filter(r => r.q <= 0.05 || r.cq <= 0.05).slice(0, 20), use = top.length ? top : rankedRows().slice(0, 5);
+  const genes = [...new Set(use.flatMap(rowGenes))];
+  const name = `Régine: genes of the list bound or regulated by ${use.slice(0, 5).map(r => r.tf.sym || r.tf.id).join(", ")}${use.length > 5 ? "…" : ""}`;
+  if (!sendToGeneCloud({ genes, name })) location.href = GENECLOUD;
+});
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-gc]");
+  if (!b) return;
+  e.stopPropagation();
+  const r = rankedRows().find(x => String(x.key) === b.dataset.gc);
+  if (r) sendToGeneCloud({ genes: rowGenes(r), name: `Régine: genes of the list ${VIEW.net === "dap" ? "bound" : VIEW.net === "any" ? "regulated" : "bound or regulated"} by ${r.tf.sym || r.tf.id}` });
+});
 
 function options() {
   return {
@@ -114,6 +158,7 @@ $("#form").addEventListener("submit", e => {
       $("#status").textContent = `done in ${((performance.now() - t0) / 1000).toFixed(1)} s`;
       show();
       writeHash(genes, o);
+      if (SRC) $("#results").scrollIntoView({ behavior: "smooth", block: "start" });   // a list sent by GeneCloud: go to the TFs
     } catch (err) {
       $("#status").innerHTML = `<span class="err">${esc(err.message)}</span>`;
       console.error(err);
@@ -474,6 +519,7 @@ function detail(r, ncol) {
     right = `<h4>Your genes: <span class="bound">bound in DAP-seq</span>; TARGET <span class="up">↑ induced</span> / <span class="dn">↓ repressed</span>; crossed out: neither</h4>`
       + chips(list, g => { const c = [bound.has(g) ? "bound" : "", up.has(g) ? "up" : dn.has(g) ? "dn" : ""].filter(Boolean).join(" "); return c || "off"; });
   }
+  left += `<p class="note"><button type="button" class="linkbtn" data-gc="${esc(r.key)}" title="Open GeneCloud with these genes of your list: what do they have in common?">→ GeneCloud: what do these genes of the list have in common?</button></p>`;
   return `<tr class="detail"><td colspan="${ncol}"><div class="det"><div>${left}</div><div>${right}</div></div></td></tr>`;
 }
 
@@ -566,6 +612,7 @@ $("#share").addEventListener("click", async () => {
 function writeHash(genes, o) {
   if (o.background === "custom") { history.replaceState(null, "", location.pathname); return; }   // too long for a URL
   const p = new URLSearchParams({ g: genes.join(","), bg: o.background, k: o.kernel, r: o.reps, s: o.seed, n: VIEW.net });
+  if (SRC) { if (SRC.name) p.set("name", SRC.name); if (SRC.go) p.set("go", SRC.go); if (SRC.from) p.set("from", SRC.from); }
   history.replaceState(null, "", "#" + p.toString());
 }
 function updateHashNet() {
@@ -574,7 +621,14 @@ function updateHashNet() {
   history.replaceState(null, "", "#" + p.toString());
 }
 function fromHash() {
+  const inc = parseIncoming(location.hash);
+  if (inc && inc.handshake && !inc.genes.length) {      // GeneCloud posts the list (any size) right after
+    SRC = { name: inc.name, go: inc.go, from: inc.from || "genecloud" }; showSource(0);
+    $("#srcbox").innerHTML += " Waiting for the gene list…";
+    return;
+  }
   if (!location.hash.includes("g=")) return;
+  if (inc && inc.from) { SRC = { name: inc.name, go: inc.go, from: inc.from }; showSource(inc.genes.length); }
   const p = new URLSearchParams(location.hash.slice(1));
   $("#genes").value = (p.get("g") || "").split(",").join("\n");
   const bg = p.get("bg"); if (bg) { const r = $(`input[name=bg][value="${bg}"]`); if (r) r.checked = true; }

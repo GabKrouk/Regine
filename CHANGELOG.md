@@ -4,6 +4,9 @@
 
 * Acronym REGINE (Resampling-based Engine for Gene-set Inference and Network Enrichment) and first reference, Beckers et al.
   (2026) Plant Physiol, shown on the page and in the README.
+* Bridge with GeneCloud: GeneCloud sends a gene list (genes found by an annotation search, the genes of a term, or a whole
+  list) and Régine ranks the TFs that bind or regulate them; every TF can send its genes of the list back to GeneCloud
+  ([INTEGRATION.md](INTEGRATION.md)).
 * Second network: the 65 TARGET experiments of ConnecTF (57 TFs, 30 of them not in DAP-seq; root and shoot protoplasts,
   cycloheximide, FDR < 5%), built by `tools/build_target.mjs` into `data/target_*` and `web/data/target.*`.
 * Each experiment is tested on all its regulated genes (kernels, score), on its induced and on its repressed genes:
