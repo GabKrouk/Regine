@@ -240,7 +240,7 @@ footer p{margin:0 0 8px;max-width:100ch}
     </div>
     <div class="chartbox">
       <div class="ttl">Separation from random genes (AUC)</div>
-      <div class="sub">Probability that a kernel of your list shares more regulators than a kernel of random genes (0.5 = no difference). The automatic kernel size is the highest point.</div>
+      <div class="sub">Probability that a kernel of your list shares more regulators than a kernel of background genes (0.5 = no difference). The automatic kernel size is the highest point. Dotted line: 95th percentile of the highest AUC of random lists of the same size (appears after calibration).</div>
       <div class="legend" id="auclegend"></div>
       <div id="aucplot"></div>
     </div>
@@ -304,7 +304,17 @@ footer p{margin:0 0 8px;max-width:100ch}
     background, and the number of TFs they share is counted (the boxplots, as in the Régine 2022 PDF). The difference
     between the two raw counts always peaks at <i>k</i> = 2, where everything shares many TFs, so Régine measures the
     separation of the two distributions instead: the AUC, the probability that a kernel of your list shares more TFs than a
-    random kernel. The kernel size with the highest AUC is used. You can click any other size.</p>
+    random kernel. The kernel size with the highest AUC is used. You can click any other size; the AUC changes little
+    with <i>k</i>, and the P values of the table do not depend on it.</p>
+    <p><b>What the AUC means (calibration).</b> Because the reported AUC is the highest of nine estimates, random lists do
+    not give exactly 0.5 (about 0.51, more for short lists), and the AUC grows with how many TFs bind the genes of the
+    list: genes bound by many TFs share many TFs whatever their regulators. After each analysis Régine therefore repeats
+    the whole procedure, choice of <i>k</i> included, on 200 random lists of the same size from the same background and
+    on 200 lists matched gene by gene for the number of TFs (or TARGET experiments) binding each gene (20 quantile bins;
+    2 000 kernels per size). The first P value says whether your genes share more regulators than random genes; the
+    second whether they share more than equally connected genes, which is the signature of a specific regulatory
+    program. A high AUC makes it more likely that the regulators of the list are among the top candidates, but there is no
+    fixed cutoff: in our benchmark no AUC threshold predicted success reliably.</p>
     <p><b>TARGET: direction and combination.</b> Each TARGET experiment is tested three times: on all its regulated
     genes (the kernels and the score), on its induced genes and on its repressed genes; a TF whose induced (repressed)
     genes are enriched in your list probably activates (represses) them. A TF tested several times keeps one row per
