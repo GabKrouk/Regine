@@ -162,10 +162,58 @@ export class Regine {
     for (const p of profile) if (p.auc > best.auc + 1e-12) best = p;
 
     const p = cl.map((kt, t) => hyperUpper(kt, N, cb[t], n)), q = bh(p);
-    const res = { genes, unknown, notInNetwork, added: added.length, n, N, background, reps, seed, profile, kAuto: best.k, cl, cb, p, q, L };
+    const res = { genes, unknown, notInNetwork, added: added.length, n, N, background, reps, seed, profile, kAuto: best.k, cl, cb, p, q, L, B, kmin, kmax };
     res.k = opts.kernel && opts.kernel !== "auto" ? Math.min(+opts.kernel, kmax) : best.k;
     res.rows = this.score(res, res.k);
     return res;
+  }
+
+  // largest kernel AUC over k = kmin..kmax for list rows L against background rows B (profile only, no TF table)
+  maxAuc(L, B, { kmin = 2, kmax = 10, reps = 2000, rand }) {
+    const acc = new Uint32Array(this.W), pl = L.slice(), pb = B.slice();
+    const draw = (pool, k) => {
+      for (let i = 0; i < k; i++) { const j = i + Math.floor(rand() * (pool.length - i)); const t = pool[i]; pool[i] = pool[j]; pool[j] = t; }
+      return pool;
+    };
+    const xl = new Int32Array(reps), xb = new Int32Array(reps);
+    let best = 0;
+    for (let k = kmin; k <= Math.min(kmax, L.length); k++) {
+      for (let r = 0; r < reps; r++) { xl[r] = this.common(draw(pl, k), k, acc); xb[r] = this.common(draw(pb, k), k, acc); }
+      best = Math.max(best, auc(xl, xb));
+    }
+    return best;
+  }
+
+  // Calibration of the kernel AUC (Régine 2.1). The reported AUC is the largest of nine noisy AUCs, and it grows with the
+  // number of TFs that bind the genes of the list. Two null distributions of the same statistic (the whole procedure,
+  // choice of k included, is repeated):
+  //   random  — lists of the same size drawn from the background
+  //   degree  — lists matched gene by gene on the number of TFs (or experiments) binding each gene (20 quantile bins)
+  // Empirical P = (1 + #null >= observed) / (1 + nNull). A generator: yields progress (0..1), returns the result.
+  *calibrate(res, { nNull = 200, reps = 2000, seed = 7 } = {}) {
+    const rand = rng(seed), { L, B, n, kmin, kmax } = res, obs = Math.max(...res.profile.map(p => p.auc));
+    const deg = new Map(B.map(r => [r, this.nTF(r)]));
+    const sorted = B.map(r => deg.get(r)).sort((a, b) => a - b);
+    const edges = [...new Set(Array.from({ length: 21 }, (_, i) => sorted[Math.min(sorted.length - 1, Math.floor(i / 20 * (sorted.length - 1)))]))];
+    const binOf = d => { let b = 0; while (b < edges.length - 2 && d >= edges[b + 1]) b++; return b; };
+    const pools = new Map(), inL = new Set(L);
+    for (const r of B) { const b = binOf(deg.get(r)); if (!pools.has(b)) pools.set(b, []); pools.get(b).push(r); }
+    const need = new Map();
+    for (const r of L) { const b = binOf(deg.get(r)); need.set(b, (need.get(b) || 0) + 1); }
+    const take = (pool, m) => { const a = pool.slice(); for (let i = 0; i < m; i++) { const j = i + Math.floor(rand() * (a.length - i)); const t = a[i]; a[i] = a[j]; a[j] = t; } return a.slice(0, m); };
+    const outside = new Map([...pools].map(([b, a]) => [b, a.filter(r => !inL.has(r))]));
+    const rnd = [], dm = [];
+    for (let i = 0; i < nNull; i++) {
+      rnd.push(this.maxAuc(take(B, n), B, { kmin, kmax, reps, rand }));
+      const D = [];
+      for (const [b, m] of need) { const src = outside.get(b).length >= m ? outside.get(b) : pools.get(b); D.push(...take(src, m)); }
+      dm.push(this.maxAuc(D, B, { kmin, kmax, reps, rand }));
+      yield (i + 1) / nNull;
+    }
+    const st = a => { const s = a.slice().sort((x, y) => x - y), q = f => s[Math.min(s.length - 1, Math.floor(f * (s.length - 1)))];
+      return { median: q(0.5), q95: q(0.95), p: (1 + a.filter(v => v >= obs).length) / (1 + a.length) }; };
+    const meanDeg = rows => rows.reduce((s, r) => s + this.nTF(r), 0) / rows.length;
+    return { obs, nNull, reps, random: st(rnd), degree: st(dm), excess: obs - st(dm).median, degList: meanDeg(L), degBg: meanDeg(B) };
   }
 
   // TF table for kernel size k (exact; no new sampling)

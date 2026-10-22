@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-10 — Régine 2.1: calibrated kernel AUC
+
+* After each analysis, the web tool repeats the whole kernel procedure (choice of k included) on 200 random lists of the
+  same size from the background and on 200 lists matched gene by gene for the number of TFs (or TARGET experiments)
+  binding each gene. The summary gives two empirical P values: co-binding beyond chance, and beyond connectivity.
+* The fixed AUC wording thresholds (0.57 / 0.65 / 0.80) are removed: in the TPJ revision analyses the AUC of random
+  lists is about 0.51 (it is the maximum of nine estimates), it follows the connectivity of the genes, and no fixed cutoff
+  predicted recovery of the regulator out of sample. The weak-leads warning now appears when the list is not above
+  random lists.
+* AUC chart: 95th percentile of random lists of the same size; "How it works" explains the calibration.
+* Engine: `Regine.maxAuc` and `Regine.calibrate` (generator, so the page stays responsive).
+
 ## 2026-10 — Régine 2.0: TARGET
 
 * Acronym REGINE (Resampling-based Engine for Gene-set Inference and Network Enrichment) and first reference, Beckers et al.

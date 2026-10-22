@@ -155,8 +155,9 @@ $("#form").addEventListener("submit", e => {
       const t0 = performance.now();
       R = analyse(genes, o);
       VIEW = { net: VIEW.net, k: { dap: R.dap.k, any: R.any.k }, by: VIEW.by, sort: null, dir: -1, all: false, open: new Set() };
-      $("#status").textContent = `done in ${((performance.now() - t0) / 1000).toFixed(1)} s`;
+      $("#status").textContent = `done in ${((performance.now() - t0) / 1000).toFixed(1)} s · calibrating the AUC…`;
       show();
+      calibrateAll(R);
       writeHash(genes, o);
       if (SRC) $("#results").scrollIntoView({ behavior: "smooth", block: "start" });   // a list sent by GeneCloud: go to the TFs
     } catch (err) {
@@ -182,23 +183,55 @@ const gdesc = g => GENES.desc[DAP.index.get(g)] || "";
 const cur = () => VIEW.net === "dap" ? { reg: DAP, res: R.dap } : { reg: T.any, res: R.any };
 const bgName = (bg, net) => ({ network: net === "dap" ? "all genes of the DAP-seq network" : "all genes regulated in at least one TARGET experiment",
   protein_coding: "protein-coding genes", custom: "your background" }[bg]);
-const strength = a => a >= 0.8 ? "strongly" : a >= 0.65 ? "clearly" : a >= 0.57 ? "weakly" : "hardly";
+// Calibration of the kernel AUC against random and degree-matched lists, run in small steps after the results are shown
+const NNULL = 200;
+function calibrateAll(run) {
+  run.cal = {};
+  const jobs = ["dap", "any"].map(net => [net, (net === "dap" ? DAP : T.any).calibrate(run[net], { nNull: NNULL })]);
+  let j = 0;
+  const step = () => {
+    if (R !== run) return;                      // a new analysis replaced this one
+    const t0 = performance.now();
+    while (j < jobs.length && performance.now() - t0 < 40) {
+      const x = jobs[j][1].next();
+      if (x.done) { run.cal[jobs[j][0]] = x.value; j++; show(true); }
+      else run.calProgress = (j + x.value) / jobs.length;
+    }
+    const pr = Math.round(100 * (run.calProgress || 0));
+    $("#status").textContent = j < jobs.length ? `calibrating the AUC against ${NNULL} random and ${NNULL} degree-matched lists… ${pr}%`
+      : "done · AUC calibrated";
+    if (j < jobs.length) setTimeout(step, 0);
+  };
+  setTimeout(step, 0);
+}
+const fmtEP = (p, nn) => p <= 1 / (nn + 1) + 1e-12 ? `P ≤ ${(1 / (nn + 1)).toFixed(3)}` : `P = ${p.toFixed(p < 0.1 ? 3 : 2)}`;
+function calText(net, res) {
+  const c = R.cal?.[net], unit = net === "dap" ? "TFs" : "TARGET experiments", verb = net === "dap" ? "bound" : "regulated";
+  if (!c) return ` <span class="note">Calibrating against random and degree-matched lists…</span>`;
+  const r = c.random, d = c.degree;
+  const t1 = r.p <= 0.05
+    ? `This is more than random lists of ${res.n} genes from the same background (median ${r.median.toFixed(2)}, 95th percentile ${r.q95.toFixed(2)}; ${fmtEP(r.p, c.nNull)}).`
+    : `This is not more than random lists of ${res.n} genes from the same background (median ${r.median.toFixed(2)}, 95th percentile ${r.q95.toFixed(2)}; ${fmtEP(r.p, c.nNull)}): treat the candidates as weak leads.`;
+  if (r.p > 0.05) return ` ${t1}`;
+  const t2 = d.p <= 0.05
+    ? `It is also more than lists of genes ${verb} by as many ${unit} as yours (median ${d.median.toFixed(2)}; ${fmtEP(d.p, c.nNull)}): your genes share regulators beyond their connectivity.`
+    : `Lists of genes ${verb} by as many ${unit} as yours (on average ${c.degList.toFixed(0)} against ${c.degBg.toFixed(0)} in the background) reach the same AUC (median ${d.median.toFixed(2)}; ${fmtEP(d.p, c.nNull)}): the AUC mostly says that your genes are heavily ${verb}, not that they share specific regulators.`;
+  return ` ${t1} ${t2}`;
+}
 const effect = (qu, qd) => qu <= 0.05 && qd <= 0.05 ? "both" : qu <= 0.05 ? "activates" : qd <= 0.05 ? "represses" : "";
 const effectHtml = e => e ? `<span class="eff ${e}">${{ activates: "↑ activates", represses: "↓ represses", both: "↑↓ both" }[e]}</span>` : "";
 
-function show() {
-  $("#results").style.display = "block";
-  $$("#netsel button").forEach(b => b.classList.toggle("on", b.dataset.n === VIEW.net));
-  const one = (net, res) => {
-    const best = res.profile.find(p => p.k === res.kAuto), unit = net === "dap" ? "TFs" : "TARGET experiments";
-    return `<b>${NETNAME[net]}:</b> your <b>${res.n}</b> genes ${strength(best.auc)} share regulators beyond chance. At the best kernel size,
-      <b class="k">k = ${res.kAuto}</b>, a kernel of your list shares more ${unit} than a kernel of random genes
-      (${bgName(res.background, net)}, N = ${res.N.toLocaleString("en")}) in <b>${Math.round(best.auc * 100)}%</b> of the draws
-      (${best.meanList.toFixed(1)} versus ${best.meanBg.toFixed(1)} on average).`
-      + (res.k !== res.kAuto ? ` The table uses the kernel size you fixed, k = ${res.k}.` : "");
-  };
-  $("#summary").innerHTML = VIEW.net === "both" ? `<p>${one("dap", R.dap)}</p><p>${one("any", R.any)}</p>`
-    : `<p>${one(VIEW.net, VIEW.net === "dap" ? R.dap : R.any)}</p>`;
+function summaryLine(net, res) {
+  const best = res.profile.find(p => p.k === res.kAuto), unit = net === "dap" ? "TFs" : "TARGET experiments";
+  return `<b>${NETNAME[net]}:</b> kernel AUC <b>${best.auc.toFixed(2)}</b> for your <b>${res.n}</b> genes. At
+    <b class="k">k = ${res.kAuto}</b>, a kernel of your list shares more ${unit} than a kernel of background genes
+    (${bgName(res.background, net)}, N = ${res.N.toLocaleString("en")}) in <b>${Math.round(best.auc * 100)}%</b> of the draws
+    (${best.meanList.toFixed(1)} versus ${best.meanBg.toFixed(1)} on average).` + calText(net, res)
+    + (res.k !== res.kAuto ? ` The table uses the kernel size you fixed, k = ${res.k}.` : "");
+}
+function summaryAndWarnings() {
+  $("#summary").innerHTML = VIEW.net === "both" ? `<p>${summaryLine("dap", R.dap)}</p><p>${summaryLine("any", R.any)}</p>`
+    : `<p>${summaryLine(VIEW.net, R[VIEW.net])}</p>`;
   const w = [], r = R.dap, list = (a, s) => `${a.length} ${s}: ${esc(a.slice(0, 12).join(", "))}${a.length > 12 ? "…" : ""}.`;
   if (r.unknown.length) w.push(list(r.unknown, `identifier${r.unknown.length > 1 ? "s" : ""} not found in Araport11`));
   if (VIEW.net !== "any" && r.notInNetwork.length) w.push(list(r.notInNetwork, `gene${r.notInNetwork.length > 1 ? "s have" : " has"} no DAP-seq peak (bound by no TF)`));
@@ -206,10 +239,16 @@ function show() {
   if (VIEW.net !== "dap" && noT.length) w.push(list(noT, `gene${noT.length > 1 ? "s are" : " is"} regulated in no TARGET experiment`));
   if (r.added) w.push(`${r.added} gene${r.added > 1 ? "s" : ""} of your list ${r.added > 1 ? "were" : "was"} not in the background and ${r.added > 1 ? "were" : "was"} added to it.`);
   for (const net of VIEW.net === "both" ? ["dap", "any"] : [VIEW.net]) {
-    const res = R[net];
-    if (res.profile.find(p => p.k === res.kAuto).auc < 0.57) w.push(`${NETNAME[net]}: the separation is close to 0.5 at every kernel size; its candidates are weak leads.`);
+    const c = R.cal?.[net];
+    if (c && c.random.p > 0.05) w.push(`${NETNAME[net]}: your genes share no more regulators than random genes of the background; its candidates are weak leads.`);
   }
   $("#warnings").innerHTML = w.map(s => `<p class="warn">⚠ ${s}</p>`).join("");
+}
+function show(calOnly = false) {
+  if (calOnly) { summaryAndWarnings(); aucChart(); return; }
+  $("#results").style.display = "block";
+  $$("#netsel button").forEach(b => b.classList.toggle("on", b.dataset.n === VIEW.net));
+  summaryAndWarnings();
   $("#profbox").style.display = VIEW.net === "both" ? "none" : "";
   $("#kwrap").style.display = VIEW.net === "both" ? "none" : "";
   if (VIEW.net !== "both") {
@@ -304,6 +343,11 @@ function aucChart() {
   const step = hiV - lo > 0.3 ? 0.1 : 0.05;
   for (let t = Math.ceil(lo / step) * step; t <= hiV; t += step) s += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(t)}" y2="${y(t)}" stroke="${grid}"/><text x="${m.l - 8}" y="${y(t) + 4}" text-anchor="end" fill="${ink}">${t.toFixed(2)}</text>`;
   s += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(0.5)}" y2="${y(0.5)}" stroke="${ink}" stroke-dasharray="4 4"/><text x="${m.l + 4}" y="${y(0.5) - 5}" fill="${ink}">random (0.5)</text>`;
+  for (const se of series) {
+    const c = R.cal?.[se.n];
+    if (c && c.random.q95 > lo && c.random.q95 < hiV) s += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(c.random.q95)}" y2="${y(c.random.q95)}" stroke="${se.color}" stroke-opacity=".55" stroke-dasharray="2 4"/>`
+      + `<text x="${W - m.r - 4}" y="${y(c.random.q95) + (se.n === "any" && series.length > 1 ? 13 : -5)}" text-anchor="end" fill="${se.color}">95% of random lists${series.length > 1 ? " (" + NETNAME[se.n] + ")" : ""}</text>`;
+  }
   for (const se of series) s += `<polyline fill="none" stroke="${se.color}" stroke-width="2" points="${se.P.map((p, i) => `${x(i)},${y(p.auc)}`).join(" ")}"/>`;
   P0.forEach((p0, i) => {
     s += `<g class="kcol" data-k="${p0.k}"><rect x="${m.l + i * cw}" y="0" width="${cw}" height="${H}" fill="transparent"/>`;
