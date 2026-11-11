@@ -1,0 +1,13 @@
+{
+ "regine_web": 1,
+ "built": "2026-10-03",
+ "W": 13,
+ "n_tfs": 387,
+ "n_genes": 38672,
+ "n_network_genes": 32606,
+ "n_protein_coding": 26575,
+ "n_edges": 2848928,
+ "n_duplicate_lines": 836598,
+ "network": "O'Malley RC et al. (2016) Cell 165:1280-1292, DAP-seq (Régine 2022 table, Dec. 2022)",
+ "annotation": "TAIR / Araport11 / UniProtKB via GeneCloud (2026)"
+}

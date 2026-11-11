@@ -1,0 +1,14 @@
+# Régine 2022 example: nitrate-responsive genes (NRT2.1, NIA1/2, NIR1, HRS1/HHO …)
+At1g13300
+At5g67420
+At4g37540
+At3g25790
+At1g49500
+At1g24280
+At5g01740
+At3g48360
+At1g25550
+At1g80380
+At5g40850
+At5g10210
+At1g12110
