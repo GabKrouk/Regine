@@ -9,6 +9,12 @@ const DATA = "data/";
 const NETNAME = { dap: "DAP-seq", any: "TARGET", both: "DAP-seq + TARGET" };
 let DAP, T, GENES, META, TMETA, R;
 let SRC = null;     // where the gene list came from {name, go, from}
+let EXAMPLE = null; // the last example loaded {name, text}
+// usage statistics, shared by the tools of gabkrouk.github.io (https://github.com/GabKrouk/tools-usage); never blocks the app
+let USAGE = null;
+import("https://gabkrouk.github.io/tools-usage/usage.js")
+  .then(m => { USAGE = m.usage("regine", { version: "2026" }); USAGE.consent(document.querySelector("#usage-consent")); })
+  .catch(() => {});
 let onReady; const ready = new Promise(r => (onReady = r));
 let VIEW = { net: "both", k: {}, by: { dap: "p", any: "p", both: "c" }, sort: null, dir: -1, all: false, open: new Set() };
 
@@ -88,6 +94,7 @@ $$("input[name=bg]").forEach(r => r.addEventListener("change", () => {
 }));
 $$(".examples button").forEach(b => b.addEventListener("click", async () => {
   $("#genes").value = await (await fetch(`examples/${b.dataset.ex}.txt`)).text();
+  EXAMPLE = { name: b.dataset.ex, text: $("#genes").value };
   countGenes();
 }));
 $("#reset").addEventListener("click", () => setTimeout(() => {
@@ -159,6 +166,11 @@ $("#form").addEventListener("submit", e => {
       show();
       calibrateAll(R);
       writeHash(genes, o);
+      try {
+        const source = EXAMPLE && $("#genes").value === EXAMPLE.text ? "example:" + EXAMPLE.name : SRC ? "from:" + (SRC.from || "link") : "paste";
+        USAGE?.run({ genes, source, name: SRC?.go ? `${SRC.name} (${SRC.go})` : SRC?.name || "",
+          params: { background: o.background, kernel: o.kernel, reps: o.reps } });
+      } catch {}
       if (SRC) $("#results").scrollIntoView({ behavior: "smooth", block: "start" });   // a list sent by GeneCloud: go to the TFs
     } catch (err) {
       $("#status").innerHTML = `<span class="err">${esc(err.message)}</span>`;

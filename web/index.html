@@ -171,7 +171,7 @@ footer p{margin:0 0 8px;max-width:100ch}
   Régine looks for the transcription factors that bind (DAP-seq) or regulate (TARGET) the genes of your list more often
   than random genes, tells you first whether your list shares regulators at all, and at which kernel size, and whether a
   TF rather induces or represses your genes.
-  <span class="note">Everything runs in your browser: your list is never sent anywhere.</span></p>
+  <span class="note">The analysis runs in your browser. We count page views and analyses, and, unless you untick the box below the button, keep an anonymous copy of the gene list to see which genes are studied together (<a href="#usage-note">details</a>).</span></p>
 
   <div class="srcbox" id="srcbox" style="display:none"></div>
 
@@ -223,6 +223,7 @@ footer p{margin:0 0 8px;max-width:100ch}
       <button class="sec" type="reset" id="reset">Reset</button>
       <span id="status"><span class="loader"></span>loading the DAP-seq and TARGET networks…</span>
     </div>
+    <div id="usage-consent" style="margin-top:6px"></div>
   </form>
 
   <section id="results" aria-live="polite">
@@ -341,6 +342,9 @@ footer p{margin:0 0 8px;max-width:100ch}
     <p><b>Reference:</b> Beckers A, Vantroeyen O, Cazevieille C, Adam H, Krouk G, Gantet P, Laplaze L, Guyomarc'h S (2026)
     PUCHI controls MYB94 and MYB96 to form the root cap cuticle of developing lateral roots. <i>Plant Physiol</i>, in press.
     <a href="https://doi.org/10.1093/plphys/kiag670">doi:10.1093/plphys/kiag670</a></p>
+    <p id="usage-note"><b>Usage statistics:</b> page views, analyses and, if the box is ticked, the gene identifiers of the list
+    (no IP address, no cookie, no account; a random identifier lasts for the browser tab only), stored by G. Krouk to improve the tools
+    and study which genes are queried together. Untick the box to keep your list private; the choice is remembered on this site.</p>
     <p id="annot">Annotation: TAIR / Araport11 (CC BY 4.0) · UniProtKB (CC BY 4.0).</p>
   </footer>
 </main>
