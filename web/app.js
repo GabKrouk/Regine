@@ -15,6 +15,10 @@ let USAGE = null;
 import("https://gabkrouk.github.io/tools-usage/usage.js")
   .then(m => { USAGE = m.usage("regine", { version: "2026" }); USAGE.consent(document.querySelector("#usage-consent")); })
   .catch(() => {});
+// one account for Régine, GeneCloud and Fiole (sign in with the Fiole account); needed to run an analysis
+const ACCOUNT = import("https://gabkrouk.github.io/tools-usage/account.js")
+  .then(m => m.account("regine", { mount: document.querySelector("#account") }))
+  .catch(() => null);                 // the account module could not load: the app keeps working
 let onReady; const ready = new Promise(r => (onReady = r));
 let VIEW = { net: "both", k: {}, by: { dap: "p", any: "p", both: "c" }, sort: null, dir: -1, all: false, open: new Set() };
 
@@ -72,6 +76,7 @@ async function load() {
   $("#status").textContent = "";
   $("#submit").disabled = false;
   onReady();
+  await ACCOUNT;                      // back from signing in: the list is put back in the URL first
   fromHash();
   announceReady();
 }
@@ -150,11 +155,14 @@ function options() {
   };
 }
 
-$("#form").addEventListener("submit", e => {
+$("#form").addEventListener("submit", async e => {
   e.preventDefault();
   const genes = parseGenes($("#genes").value), o = options();
   if (genes.length < 2) { $("#status").innerHTML = '<span class="err">Paste at least 2 AGI identifiers.</span>'; return; }
   if (o.background === "custom" && o.custom.length < 50) { $("#status").innerHTML = '<span class="err">Paste your background genes (at least 50).</span>'; return; }
+  // a free account is needed to run an analysis: the list and options are kept in the URL and come back after signing in
+  const acc = await ACCOUNT;
+  if (acc && !acc.signedIn()) { writeHash(genes, o); acc.ensure(); $("#status").textContent = "Sign in to run the analysis."; return; }
   $("#submit").disabled = true;
   $("#status").innerHTML = '<span class="loader"></span>drawing random kernels…';
   setTimeout(() => {
